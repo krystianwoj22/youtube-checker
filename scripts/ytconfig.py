@@ -41,9 +41,34 @@ DEFAULTS: dict[str, Any] = {
 
 API_KEY_VARS = ("YOUTUBE_API_KEY", "YT_API_KEY", "YOUTUBE_DATA_API_KEY")
 
+ENV_FILE = ROOT / ".env"
+
 
 class ConfigError(RuntimeError):
     pass
+
+
+def _load_dotenv() -> None:
+    """Read .env into the environment if present. Real env vars always win, so
+    an exported key overrides the file rather than the other way round.
+
+    The key lives here and never in config.json — config.json is a project file
+    people share and paste; .env is gitignored and exists to hold secrets.
+    """
+    if not ENV_FILE.exists():
+        return
+    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv()
 
 
 def _merge(base: dict, override: dict) -> dict:

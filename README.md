@@ -14,10 +14,14 @@ It is **not** a cron. It is **not** an idea generator. It does **not** re-score 
 ## Setup
 
 ```bash
-cp config/config.example.json config/config.json   # fill in channel + competitors
-export YOUTUBE_API_KEY="..."                       # reuse the Viral Content System key
+cp config/config.example.json config/config.json   # channel + competitors
+cp .env.example .env                               # then put the API key in .env
 python scripts/doctor.py                           # verify it can run
 ```
+
+The API key lives in `.env` and nowhere else — `.env` is gitignored, `config.json`
+is not a place for secrets. An exported `YOUTUBE_API_KEY` overrides the file if you
+prefer shell profiles.
 
 `doctor.py` tells you exactly what is missing. Nothing to install — standard library only.
 

@@ -1,4 +1,7 @@
-# Local config — holds channel IDs and any secrets
+# Secrets — the API key lives here and nowhere else
+.env
+
+# Local config — channel IDs and thresholds
 config/config.json
 
 # Runtime caches (API responses, computed medians)
