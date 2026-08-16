@@ -57,14 +57,22 @@ def mode_a_supply(query: str, days: int, limit: int = 50) -> dict:
             channels[v["channel_id"]] = v
 
     ranked = sorted(fresh, key=lambda v: v["views"], reverse=True)
-    return {
+    truncated = len(videos) >= limit
+    out = {
         "query": query,
         "window_days": days,
         "videos_found": len(fresh),
         "channels_published_7d": len(channels),
+        "channels_published_7d_is_floor": truncated,
         "top_videos": [_fmt_video(v) for v in ranked[:10]],
         "_field_note": "channels_published_7d feeds score.py Mode A. >= 3 closes the window.",
     }
+    if truncated:
+        out["_truncation_note"] = (
+            f"Search hit the {limit}-result limit, so the channel count is a FLOOR. "
+            "Report it as a '+' figure. The window is closed regardless."
+        )
+    return out
 
 
 def mode_b_supply(query: str, cfg: dict, limit: int = 50, max_median_lookups: int = 12) -> dict:
@@ -122,12 +130,19 @@ def mode_b_supply(query: str, cfg: dict, limit: int = 50, max_median_lookups: in
     overperformers.sort(key=lambda v: v["overperformance_ratio"], reverse=True)
     best_ratio = overperformers[0]["overperformance_ratio"] if overperformers else 0.0
 
+    # The search returns at most `limit` results, so a full page means the real
+    # count is "at least this many", not "exactly this many". Saying 50 when the
+    # truth is 400 is the kind of vague-number-wearing-precision the brief bans.
+    truncated = len(videos) >= limit
+
     result = {
         "query": query,
         "window_days": window,
         "videos_found": len(videos),
+        "results_truncated": truncated,
         # --- fields that feed score.py ---
         "videos_90d_over_20k": len(over_threshold),
+        "videos_90d_over_20k_is_floor": truncated,
         "big_channel_covered_30d": bool(big_recent),
         "best_overperformance_ratio": best_ratio,
         "overperformance_sample_size": len(overperformers),
@@ -141,6 +156,13 @@ def mode_b_supply(query: str, cfg: dict, limit: int = 50, max_median_lookups: in
         "top_videos": [_fmt_video(v) for v in sorted(videos, key=lambda x: x["views"], reverse=True)[:10]],
         "failed_median_lookups": failed_lookups,
     }
+
+    if truncated:
+        result["_truncation_note"] = (
+            f"Search returned a full page ({limit}); videos_90d_over_20k={len(over_threshold)} is a "
+            f"FLOOR, not an exact count. Report it as '{len(over_threshold)}+' in the EVIDENCE block. "
+            "The topic is heavily covered — the saturation sub-score is already at its floor either way."
+        )
 
     if not overperformers:
         result["_warning"] = (
