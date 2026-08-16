@@ -1,0 +1,46 @@
+{
+  "_comment": "Copy to config/config.json and fill in. config.json is gitignored.",
+
+  "channel": {
+    "id": "",
+    "handle": "@KrystianWojtarowicz",
+    "_comment": "Either works. 'id' (UC...) skips a lookup call. The denominator of the whole 0-100 scale is this channel's median."
+  },
+
+  "competitor_channel_ids": [],
+  "_competitor_comment": "Reuse COMPETITOR_CHANNEL_IDS from the Viral Content System. Used for 'did any video beat its own channel median' (Mode B check 2). Leave empty and the tool resolves competitor channels live from search results instead.",
+
+  "median": {
+    "lookback_uploads": 30,
+    "exclude_younger_than_days": 30,
+    "min_duration_seconds": 90,
+    "cache_days": 7,
+    "_comment": "exclude_younger_than_days: uploads under 30 days have not finished accumulating views, so they are excluded from the median but still reported as reference points. min_duration_seconds filters Shorts out of the median - a channel that posts Shorts otherwise has a meaningless median."
+  },
+
+  "saturation": {
+    "mode_a_window_days": 7,
+    "mode_a_closed_at_channels": 3,
+    "mode_b_window_days": 90,
+    "mode_b_relevant_views": 20000,
+    "big_channel_subscribers": 100000,
+    "big_channel_window_days": 30,
+    "_comment": "Hard-gate thresholds from the build brief. Change these only with a reason - they are what makes the tool able to say DON'T FILM."
+  },
+
+  "execution": {
+    "available_hours_per_video": 8,
+    "paid_tools": ["Claude Pro", "OpenAI Plus", "n8n Cloud Starter", "Make Core"],
+    "_comment": "What Krystian can realistically build and what he already pays for. Mode B check 3 (executability) reads this."
+  },
+
+  "notion": {
+    "backlog_database": "Idea Backlog - Youtube",
+    "write_back": false,
+    "_comment": "write_back=false keeps the Checker read-only: verdicts go to chat only. Set true to allow writing the verdict onto the backlog row. The independence rule in the brief applies either way."
+  },
+
+  "prediction_log": {
+    "path": "data/predictions.csv"
+  }
+}

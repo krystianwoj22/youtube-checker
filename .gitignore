@@ -1,0 +1,16 @@
+# Local config — holds channel IDs and any secrets
+config/config.json
+
+# Runtime caches (API responses, computed medians)
+data/cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
