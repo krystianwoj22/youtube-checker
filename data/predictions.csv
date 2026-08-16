@@ -1,2 +1,6 @@
 id,date,topic,mode,score,verdict,mult_low,mult_high,median_at_prediction,pred_views_low,pred_views_high,gated,video_id,published_at,actual_7d,actual_30d,notes
 1,2026-08-16,"Full tutorial on generating transcript-synced, auto-branded motion graphics in Claude Design",A,35,DON'T FILM,0.28,0.56,,,,yes,,,,,
+2,2026-08-16,"Claude Code's July 28 update — stateless MCP, private-network tunnels, Opus 5 as default, and the Aug 17 Workbench retirement",B,63,SAFE FILLER,0.9,1.57,,,,no,,,,,real_demand unmeasured (no API key); ratio set to 1.0 floor
+3,2026-08-16,Ranked comparison of the active Claude models by real use case and current pricing,B,60,SAFE FILLER,0.8,1.4,,,,no,,,,,real_demand unmeasured (no API key); ratio set to 1.0 floor
+4,2026-08-16,"Claude Code's July 28 update — stateless MCP, private-network tunnels, Opus 5 as default, and the Aug 17 Workbench retirement",B,73,FILM,1.27,2.49,,,,no,,,,,"REVISED #2: overperformance 1.88x measured, read from row Proof Stats after verdict"
+5,2026-08-16,Ranked comparison of the active Claude models by real use case and current pricing,B,38,DON'T FILM,0.32,0.63,,,,yes,,,,,REVISED #3: 100K+ channel gate tripped by row's own Proof Stats (Nate 80k D+4)
