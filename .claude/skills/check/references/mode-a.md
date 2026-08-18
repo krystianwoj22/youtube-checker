@@ -6,6 +6,10 @@ Demand data is **deliberately absent** from this rubric. On day zero it does not
 and pretending otherwise is what makes a fresh news item lose to a safe proven topic.
 Mode A measures different things, not the same things with missing data.
 
+The sub-score spreads are wide on purpose: a niche, non-demoable, contested launch
+lands in ONLY IF territory **without** any gate firing. Passing the gates is not the
+same as earning a green verdict.
+
 Run the checks in this order. Each must yield a number or a concrete finding.
 
 ---

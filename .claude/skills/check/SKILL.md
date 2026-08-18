@@ -66,7 +66,8 @@ python scripts/median.py
 ```
 
 This is the denominator of the entire scale. Never hardcode it, never estimate it.
-It is cached for 7 days; add `--refresh` to force recomputation.
+It is cached for 7 days; add `--refresh` to force recomputation. Its p25/p75 spread
+also sizes the predicted band — a consistent channel gets a tighter interval.
 
 If it fails (no API key, no channel configured), say so plainly and continue with
 multiples only — do not invent a median.
@@ -77,13 +78,17 @@ Run the checks **in order**. Every check must produce a **number or a concrete
 finding**. `"unknown"` is an acceptable value; a vague adjective is not.
 
 - **Mode A** → follow `references/mode-a.md`
-- **Mode B** → follow `references/mode-b.md`
+- **Mode B** → follow `references/mode-b.md` — starts with **your own channel's
+  history on the topic**, the heaviest input in the mode and the only one about
+  Krystian's audience rather than someone else's.
 
 Live supply data:
 
 ```bash
 python scripts/supply.py mode-a --q "<topic>"     # who already published
-python scripts/supply.py mode-b --q "<topic>"     # saturation + the real-demand test
+python scripts/supply.py mode-b --q "<topic>"     # saturation + momentum + real demand
+                                                  #   + own-channel history, in one run
+python scripts/history.py --q "<topic>"           # own-channel history alone
 ```
 
 If the API quota is gone or the topic queries badly, **a screenshot of YouTube search
@@ -102,9 +107,12 @@ python scripts/score.py --file /tmp/evidence.json --json
 ```
 
 Field schemas are in `references/scoring.md`. The script applies the hard gates
-itself — window closed, dead topic, 100K+ channel covered it, viewer cannot access
-the product, cannot ship in time. **A tripped gate caps the score no matter how good
-everything else is.** Report the gate verbatim when it fires.
+itself — window closed, dead topic, 100K+ channel covered it *and won on it*,
+cannibalising your own recent video, viewer cannot access the product, cannot ship
+in time. **A tripped gate caps the score no matter how good everything else is.**
+Report the gate verbatim when it fires. Two gates are conditional by design: your
+own channel over-performing on the topic overrides the dead-topic gate, and a big
+channel's *flop* on the topic does not close it.
 
 ## Step 4 — write the output
 
@@ -127,7 +135,11 @@ python scripts/predlog.py add --from-result /tmp/result.json
 
 A prediction written down before filming is the only mechanism that ever tells you
 whether the 0-100 scale means anything. Do this on every run, including DON'T FILM
-verdicts — those are the cheapest predictions to verify.
+verdicts. Killed ideas are verified WITHOUT filming: ~30-60 days later,
+`python scripts/predlog.py shadow --id <n> --q "<topic>"` checks whether anyone else
+shipped the topic and beat their own median after the kill — the only way false
+negatives ever become visible. `predlog.py calibrate` lists the kills still waiting
+for their shadow check.
 
 ---
 

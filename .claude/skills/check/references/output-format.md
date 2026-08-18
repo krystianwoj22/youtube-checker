@@ -45,9 +45,13 @@ number or a concrete finding.
 
 Good:
 ```
+Own history:     2 prior videos — best did 1.6× YOUR median (MCP intro, 14K views); last one 190d ago
 Supply (7d):     2 channels published — Matt Wolfe (41K views, 3d), AI Foundations (9K, 1d)
-Real demand:     best video 2.4× its own channel median (n=11 checked)
+Real demand:     best video 2.4× its own channel median, 18d old (n=11 checked)
+Momentum:        accelerating — 3 winners in the last 30d vs 0.5/30d before
+Big channel:     covered 12d ago by NetworkChuck — but 0.7× his median (flop; gate does not fire)
 Executability:   ~6h — n8n Cloud Starter (have it) + Anthropic API key (have it)
+Packaging:       4/5 checks pass — no curiosity gap yet in the working title
 ```
 
 Bad — these are opinions wearing a number's clothes:

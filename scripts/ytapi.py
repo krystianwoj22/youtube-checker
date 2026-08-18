@@ -204,6 +204,8 @@ def video_details(video_ids: list[str]) -> list[dict]:
                     "published_at": published,
                     "age_days": round(days_since(published), 1),
                     "views": int(stats.get("viewCount", 0) or 0),
+                    "likes": int(stats.get("likeCount", 0) or 0),
+                    "comments": int(stats.get("commentCount", 0) or 0),
                     "duration_seconds": parse_duration(item["contentDetails"].get("duration", "")),
                     "url": f"https://youtube.com/watch?v={item['id']}",
                 }

@@ -39,10 +39,13 @@ The `check` skill handles the rest. Behind it:
 
 ```bash
 python scripts/median.py                          # the denominator of the whole scale
+python scripts/history.py --q "topic"             # YOUR channel's history on the topic
 python scripts/supply.py mode-a --q "topic"       # who already published
-python scripts/supply.py mode-b --q "topic"       # saturation + the real-demand test
+python scripts/supply.py mode-b --q "topic"       # saturation + momentum + real demand
+                                                  #   + own history, in one run
 python scripts/score.py --file evidence.json      # verdict, gates, predicted views
 python scripts/predlog.py add --from-result r.json
+python scripts/predlog.py shadow --id 3 --q "..." # verify a killed idea without filming
 python scripts/predlog.py calibrate               # was the scale right?
 ```
 
@@ -77,7 +80,9 @@ things with missing data.
 
 Abstract points cannot be wrong, so they teach you nothing. A multiple can be checked
 at +30d — which is the entire point of the prediction log. The median is computed at
-runtime from your last ~30 uploads; it is never hardcoded.
+runtime from your last ~30 uploads; it is never hardcoded. The predicted band is a
+50% interval sized to **your channel's own upload-to-upload volatility** (p25/p75) —
+a consistent channel gets a tight band, a spiky one gets an honest wide one.
 
 `python scripts/score.py --table` prints the full curve.
 
@@ -97,15 +102,29 @@ reachable:
 | 3+ channels published in the last 7 days | 35 | A |
 | Waitlist / enterprise-only (viewer cannot touch it) | 39 / 32 | A |
 | Cannot ship before the window closes | 45 | A |
-| Nothing on the topic ever beat its own channel median | 35 | B |
-| A 100K+ channel covered it in the last 30 days | 38 | B |
+| Nothing ever beat its own channel median — including your own uploads | 35 | B |
+| A 100K+ channel covered it in the last 30 days **and beat its own median** | 38 | B |
+| Your own video on the topic is under 60 days old (cannibalisation) | 45 | B |
 
-The second B gate is the one the daily system is structurally bad at: **if nothing has
+The dead-topic gate is the one the daily system is structurally bad at: **if nothing has
 ever over-performed on a topic, "no competition" means no demand, not an opening.** Most
-"nobody is covering this!" ideas die there.
+"nobody is covering this!" ideas die there. Two gates are conditional by design: your
+own channel over-performing on the topic overrides the dead-topic gate (your audience
+already proved demand), and a big channel that covered the topic but **flopped against
+its own median** does not close it — that is contested ground and free packaging intel.
 
 Relatedly, the saturation curve is not monotonic — **zero competitors scores worse than
 two.** Two proven videos means demand exists and there is room; zero means unproven.
+
+### Your own channel is the heaviest input
+
+The first build scored ideas entirely on other people's audiences. Mode B now starts
+with `history.py`: how did **your** videos on this topic do against **your** median?
+That signal carries weight 0.22 — the heaviest in the mode — because three of your
+videos doing 0.6× your median is not overridden by a competitor doing 2.4× on theirs.
+Topic momentum (are the winners clustered in the last 30 days, or is the topic
+burning out?) and staleness caps on old overperformance evidence keep the demand
+numbers current rather than quarterly.
 
 ### Independence from the daily system
 
@@ -139,9 +158,21 @@ python scripts/predlog.py fill --id 3 --video-id dQw4w9WgXcQ
 python scripts/predlog.py calibrate
 ```
 
-`calibrate` reports band hit-rate and bias, split by mode — so after ~15-20 entries you
-can see whether Mode A or Mode B is better calibrated and adjust the scale on evidence
-instead of feel. No dashboard.
+`calibrate` reports the **log error** (how far actuals land from the predicted centre,
+as a multiplicative factor) split by mode — a metric that converges around ~20 entries
+and cannot be gamed by widening the band; band hit-rate is reported as secondary only.
+
+Killed ideas get verified too — **without filming them**:
+
+```bash
+python scripts/predlog.py shadow --id 3 --q "topic"
+```
+
+If someone else shipped the topic after the kill and beat their own channel's median,
+the kill was probably wrong — and that is recordable with zero filming. This is the
+only mechanism that ever surfaces false negatives, which is exactly where a validator
+that mostly says "no" hides its mistakes. `calibrate` nags about kills still waiting
+for their shadow check. No dashboard.
 
 ---
 
@@ -151,13 +182,14 @@ instead of feel. No dashboard.
 .claude/skills/check/     the operating procedure (SKILL.md + references/)
 .claude/commands/check.md the /check slash command
 scripts/median.py         channel + competitor medians  (the scale's denominator)
-scripts/supply.py         live saturation + the real-demand test
+scripts/history.py        YOUR channel's history on a topic (the heaviest Mode B input)
+scripts/supply.py         live saturation + momentum + the real-demand test
 scripts/score.py          the 0-100 scale, the gates, the verdict
-scripts/predlog.py        prediction log + calibration
+scripts/predlog.py        prediction log + calibration + shadow checks on killed ideas
 scripts/doctor.py         setup check
 config/config.json        channel, competitors, thresholds  (gitignored)
 data/predictions.csv      the log
-tests/                    31 tests, mostly locking the gates in place
+tests/                    53 tests, mostly locking the gates in place
 ```
 
 ```bash

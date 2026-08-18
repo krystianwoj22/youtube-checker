@@ -33,6 +33,7 @@ DEFAULTS: dict[str, Any] = {
         "mode_b_relevant_views": 20000,
         "big_channel_subscribers": 100000,
         "big_channel_window_days": 30,
+        "own_recent_video_days": 60,
     },
     "execution": {"available_hours_per_video": 8, "paid_tools": []},
     "notion": {"backlog_database": "Idea Backlog - Youtube", "write_back": False},

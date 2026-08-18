@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import statistics
 import sys
 from datetime import date
@@ -41,6 +42,7 @@ FIELDS = [
     "published_at",
     "actual_7d",
     "actual_30d",
+    "shadow_check",
     "notes",
 ]
 
@@ -88,10 +90,17 @@ def add(result: dict, notes: str = "", when: str | None = None) -> dict:
         "published_at": "",
         "actual_7d": "",
         "actual_30d": "",
+        "shadow_check": "",
         "notes": notes,
     }
     rows.append(row)
     _write(path, rows)
+    if result.get("verdict") == "DON'T FILM" or result.get("gated"):
+        print(
+            f"note: killed/gated idea logged. In ~60d, shadow-verify the kill without filming:\n"
+            f"  python scripts/predlog.py shadow --id {row['id']} --q \"{row['topic'][:60]}\"",
+            file=sys.stderr,
+        )
     return row
 
 
@@ -146,19 +155,27 @@ def _actual_multiple(row: dict, horizon: str = "actual_30d") -> float | None:
 
 
 def calibrate(horizon: str = "actual_30d") -> str:
-    """Was the scale right? Brief §8: after ~15-20 entries this can adjust the
-    scale on evidence instead of feel."""
+    """Was the scale right?
+
+    The primary metric is the LOG ERROR: ln(actual multiple) - ln(predicted
+    centre). Band hit-rate alone is uninformative at small n — a tool that
+    always printed 70 would land 'inside the band' ~30% of the time by pure
+    channel variance, and telling that apart from a real signal via hit-rate
+    needs 100+ filmed videos. The mean log error (bias) and its spread converge
+    an order of magnitude faster and cannot be gamed by widening the band.
+    """
     rows = _read(_path())
     scored = []
     for row in rows:
         mult = _actual_multiple(row, horizon)
-        if mult is None:
+        if mult is None or mult <= 0:
             continue
         try:
             predicted = int(row["score"])
             lo, hi = float(row["mult_low"]), float(row["mult_high"])
         except (ValueError, KeyError):
             continue
+        center = score_mod.score_to_multiple(predicted)
         scored.append(
             {
                 "id": row["id"],
@@ -167,7 +184,7 @@ def calibrate(horizon: str = "actual_30d") -> str:
                 "score": predicted,
                 "band": (lo, hi),
                 "actual_mult": mult,
-                "implied_score": score_mod.multiple_to_score(mult),
+                "log_err": math.log(mult) - math.log(center),
                 "hit": lo <= mult <= hi,
             }
         )
@@ -181,39 +198,102 @@ def calibrate(horizon: str = "actual_30d") -> str:
         )
         return "\n".join(lines)
 
-    hits = sum(1 for s in scored if s["hit"])
-    bias = statistics.fmean(s["implied_score"] - s["score"] for s in scored)
-    lines.append(f"entries with actuals : {len(scored)}")
-    lines.append(f"inside predicted band: {hits}/{len(scored)}  ({hits / len(scored):.0%})")
-    lines.append(
-        f"mean bias            : {bias:+.1f} score points  "
-        + ("(scale runs PESSIMISTIC)" if bias > 3 else "(scale runs OPTIMISTIC)" if bias < -3 else "(well centred)")
-    )
+    def _report(subset: list[dict], label: str) -> None:
+        bias = math.exp(statistics.fmean(s["log_err"] for s in subset))
+        typical = math.exp(statistics.median(abs(s["log_err"]) for s in subset))
+        hits = sum(1 for s in subset if s["hit"])
+        drift = (
+            "predictions run PESSIMISTIC — reality beats them"
+            if bias > 1.25
+            else "predictions run OPTIMISTIC — reality falls short"
+            if bias < 0.8
+            else "well centred"
+        )
+        lines.append(f"{label}: n={len(subset)}")
+        lines.append(f"  bias         : actuals average {bias:.2f}x the predicted centre  ({drift})")
+        lines.append(f"  typical miss : {typical:.2f}x off the centre")
+        lines.append(f"  in band      : {hits}/{len(subset)} (secondary metric — do not tune on this)")
 
+    _report(scored, "ALL")
     for mode in ("A", "B"):
         subset = [s for s in scored if s["mode"] == mode]
         if subset:
-            mode_hits = sum(1 for s in subset if s["hit"])
-            mode_bias = statistics.fmean(s["implied_score"] - s["score"] for s in subset)
-            lines.append(
-                f"  mode {mode}: {mode_hits}/{len(subset)} in band, bias {mode_bias:+.1f}"
-            )
+            _report(subset, f"mode {mode}")
 
-    if len(scored) < 15:
+    if len(scored) < 20:
         lines.append(
-            f"\nNote: {len(scored)} entries. The brief expects ~15-20 before adjusting the scale — "
-            "read this as a direction, not a correction."
+            f"\nNote: {len(scored)} entries. Bias stabilises around ~20 — until then read this "
+            "as a direction, not a correction."
+        )
+
+    unverified_kills = [
+        r for r in rows
+        if (r.get("verdict") == "DON'T FILM" or r.get("gated") == "yes")
+        and not r.get("shadow_check")
+        and not r.get(horizon)
+    ]
+    if unverified_kills:
+        lines.append(
+            f"\n{len(unverified_kills)} killed idea(s) never shadow-verified — false negatives are "
+            "invisible until you run:\n  python scripts/predlog.py shadow --id <n> --q \"<topic>\""
         )
 
     lines.append("")
-    lines.append(f"{'id':>3}  {'mode':>4}  {'pred':>4}  {'band':>12}  {'actual':>8}  {'hit':>4}  topic")
+    lines.append(f"{'id':>3}  {'mode':>4}  {'pred':>4}  {'band':>12}  {'actual':>8}  {'err':>7}  topic")
     for s in scored:
         band = f"{s['band'][0]}-{s['band'][1]}x"
         lines.append(
             f"{s['id']:>3}  {s['mode']:>4}  {s['score']:>4}  {band:>12}  "
-            f"{s['actual_mult']:>7.2f}x  {'yes' if s['hit'] else 'NO':>4}  {s['topic'][:38]}"
+            f"{s['actual_mult']:>7.2f}x  {math.exp(s['log_err']):>6.2f}x  {s['topic'][:34]}"
         )
     return "\n".join(lines)
+
+
+def shadow(entry_id: int, query: str) -> str:
+    """Verify a killed idea WITHOUT filming it.
+
+    The log's structural blind spot: actuals only exist for videos that were
+    filmed, so DON'T FILM verdicts — where the tool claims its value — are
+    never tested. This closes half of that hole: if someone ELSE shipped the
+    topic after the kill and beat their own channel's median, the kill was
+    probably wrong, and that is recordable with zero filming.
+    """
+    from datetime import datetime
+
+    import supply as supply_mod
+    from ytconfig import load as load_cfg
+
+    path = _path()
+    rows = _read(path)
+    row = next((r for r in rows if r.get("id") == str(entry_id)), None)
+    if row is None:
+        raise SystemExit(f"error: no prediction with id {entry_id}")
+
+    pred_date = datetime.fromisoformat(row["date"]).date()
+    days_since = (date.today() - pred_date).days
+    if days_since < 14:
+        print(
+            f"note: prediction is only {days_since}d old — a clean shadow check wants 30-60d.",
+            file=sys.stderr,
+        )
+
+    res = supply_mod.mode_b_supply(query, load_cfg())
+    after = [
+        o for o in res.get("overperformers", [])
+        if o["age_days"] <= days_since and o.get("overperformance_ratio", 0) >= 1.5
+    ]
+    if after:
+        best = max(after, key=lambda o: o["overperformance_ratio"])
+        outcome = (
+            f"FALSE NEGATIVE? {best['channel']} did {best['overperformance_ratio']}x its median "
+            f"({best['views']:,} views) {best['age_days']:.0f}d ago — after the kill"
+        )
+    else:
+        outcome = f"kill holds: no post-verdict video beat 1.5x its channel median ({days_since}d window)"
+
+    row["shadow_check"] = f"{date.today().isoformat()}: {outcome}"
+    _write(path, rows)
+    return f"#{row['id']} {row['topic'][:50]}\n  {outcome}"
 
 
 def render_list() -> str:
@@ -255,6 +335,10 @@ def main() -> int:
     c = sub.add_parser("calibrate", help="Was the scale right?")
     c.add_argument("--horizon", default="actual_30d", choices=["actual_7d", "actual_30d"])
 
+    sh = sub.add_parser("shadow", help="Verify a killed idea without filming it")
+    sh.add_argument("--id", type=int, required=True)
+    sh.add_argument("--q", required=True, help="The topic query, same as supply.py mode-b")
+
     args = parser.parse_args()
 
     if args.cmd == "add":
@@ -287,6 +371,8 @@ def main() -> int:
         print(f"updated #{row['id']}: 7d={row['actual_7d'] or '__'} 30d={row['actual_30d'] or '__'}")
     elif args.cmd == "calibrate":
         print(calibrate(args.horizon))
+    elif args.cmd == "shadow":
+        print(shadow(args.id, args.q))
     return 0
 
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import sys
 import time
@@ -72,6 +73,12 @@ def compute_median(
     views = sorted(v["views"] for v in eligible)
     median = statistics.median(views)
 
+    p25 = int(statistics.quantiles(views, n=4)[0]) if len(views) >= 4 else int(views[0])
+    p75 = int(statistics.quantiles(views, n=4)[2]) if len(views) >= 4 else int(views[-1])
+    # Upload-to-upload volatility (lognormal sigma). score.py uses this to size
+    # the predicted band to THIS channel instead of an arbitrary constant.
+    sigma = round(math.log(p75 / p25) / 1.349, 3) if p25 > 0 and p75 > p25 else None
+
     result = {
         "channel_id": channel_id,
         "channel_title": info.get("title", ""),
@@ -79,8 +86,9 @@ def compute_median(
         "median_views": int(median),
         "mean_views": int(statistics.fmean(views)),
         "sample_size": len(eligible),
-        "p25_views": int(statistics.quantiles(views, n=4)[0]) if len(views) >= 4 else int(views[0]),
-        "p75_views": int(statistics.quantiles(views, n=4)[2]) if len(views) >= 4 else int(views[-1]),
+        "p25_views": p25,
+        "p75_views": p75,
+        "sigma": sigma,
         "min_views": views[0],
         "max_views": views[-1],
         "filters": {
@@ -129,19 +137,31 @@ def competitor_median(channel_id: str, refresh: bool = False) -> dict:
     """Median for someone else's channel — used for 'did this video beat its
     own channel's median', which is Mode B's most important check.
 
-    Competitor medians use a looser filter: we want a fair denominator for
-    *their* recent output, not a strict view of a channel we know well.
+    Uses the SAME young-upload exclusion as the own-channel median: the final
+    prediction converts one denominator into the other, so they must be
+    computed the same way. Falls back to no exclusion only when a channel is so
+    new that filtering leaves nothing.
     """
     cfg = load()
     m = cfg["median"]
-    return compute_median(
-        channel_id,
-        lookback_uploads=m["lookback_uploads"],
-        exclude_younger_than_days=0,
-        min_duration_seconds=m["min_duration_seconds"],
-        cache_days=m["cache_days"],
-        refresh=refresh,
-    )
+    try:
+        return compute_median(
+            channel_id,
+            lookback_uploads=m["lookback_uploads"],
+            exclude_younger_than_days=m["exclude_younger_than_days"],
+            min_duration_seconds=m["min_duration_seconds"],
+            cache_days=m["cache_days"],
+            refresh=refresh,
+        )
+    except ytapi.YouTubeError:
+        return compute_median(
+            channel_id,
+            lookback_uploads=m["lookback_uploads"],
+            exclude_younger_than_days=0,
+            min_duration_seconds=m["min_duration_seconds"],
+            cache_days=m["cache_days"],
+            refresh=refresh,
+        )
 
 
 def _format_human(result: dict) -> str:
