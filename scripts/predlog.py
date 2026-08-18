@@ -315,9 +315,9 @@ def main() -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     a = sub.add_parser("add", help="Append a prediction")
-    a.add_argument("--topic", required=True)
-    a.add_argument("--mode", required=True, choices=["A", "B"])
-    a.add_argument("--score", type=int, required=True)
+    a.add_argument("--topic")
+    a.add_argument("--mode", choices=["A", "B"])
+    a.add_argument("--score", type=int)
     a.add_argument("--median", type=int, help="Channel median at prediction time")
     a.add_argument("--gated", action="store_true")
     a.add_argument("--notes", default="")
@@ -344,6 +344,8 @@ def main() -> int:
     if args.cmd == "add":
         if args.from_result:
             result = json.loads(Path(args.from_result).read_text(encoding="utf-8"))
+        elif not (args.topic and args.mode and args.score is not None):
+            parser.error("add needs either --from-result or all of --topic/--mode/--score")
         else:
             lo, hi = score_mod.multiple_band(args.score)
             verdict = score_mod.verdict_for(args.score)
