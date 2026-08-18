@@ -1,8 +1,9 @@
 # Secrets — the API key lives here and nowhere else
 .env
 
-# Local config — channel IDs and thresholds
-config/config.json
+# config/config.json is committed on purpose: it holds no secrets (channel
+# handle + thresholds only) and cloud sessions clone the repo fresh, so it has
+# to travel with it. The API key stays in .env / the environment variables.
 
 # Runtime caches (API responses, computed medians)
 data/cache/
