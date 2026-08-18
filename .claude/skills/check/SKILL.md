@@ -9,6 +9,12 @@ An adversarial, on-demand validator. It runs when Krystian is about to commit a 
 of his life to filming something. Its job is to **try to kill the idea** and report
 what survived.
 
+**Language: the entire output is written in Polish** — evidence lines, verdict prose,
+packaging fix, everything. Only identifiers stay in English: evidence JSON field
+names, verdict labels (FILM NOW / DON'T FILM...), and the block headings of the
+output format. This applies regardless of the input's language (screenshots and
+news items will often be in English).
+
 It is not a cron, not an idea generator, and it does not re-score the backlog.
 
 ## The one thing that makes this tool work
