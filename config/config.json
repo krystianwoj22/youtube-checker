@@ -1,8 +1,8 @@
 {
   "_comment": "Live config. No secrets here - the API key lives in .env / environment variables.",
   "channel": {
-    "id": "",
-    "handle": "@KrystianWojtarowicz",
+    "id": "UCKlytYAOLYsiz6sY0zzmY4A",
+    "handle": "@krystianwojtarowicz-ai",
     "_comment": "Either works. 'id' (UC...) skips a lookup call. The denominator of the whole 0-100 scale is this channel's median."
   },
   "competitor_channel_ids": [],
