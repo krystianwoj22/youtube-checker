@@ -1,3 +1,4 @@
 id,date,topic,mode,score,verdict,mult_low,mult_high,median_at_prediction,pred_views_low,pred_views_high,gated,video_id,published_at,actual_7d,actual_30d,shadow_check,notes
 1,2026-08-18,Tutorial: motion graphics w Claude Design - od transkryptu do gotowej animacji (z eksportem do wideo),B,60,SAFE FILLER,0.8,1.4,,,,no,,,,,,No API in session: median unavailable; demand ratio is an UNVERIFIED floor estimate (n=1); big-channel check not run - see kill conditions
 2,2026-08-18,"Tutorial funkcji Record a Skill w Claude Cowork — nagrywasz raz swoje działania na ekranie, Claude zamienia to w wielokrotnego użytku skilla",B,38,DON'T FILM,0.25,0.84,398,100,334,yes,,,,,,
+3,2026-08-26,"Claude ma teraz jedną pamięć wspólną dla czatu i Cowork — briefujesz raz w czacie, Cowork już zna projekt bez ponownego tłumaczenia",A,35,DON'T FILM,0.21,0.74,391,82,289,yes,,,,,,
